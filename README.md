@@ -1,36 +1,120 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# 2-Player Card Game
+
+An elegant frontend-focused 2-player card game built with Next.js, React, and Tailwind CSS.
+
+## Game Overview
+
+This is a turn-based card game where two players take turns drawing cards from a deck. Each card contains a prompt or instruction that requires responses from one or both players. The game manages the flow and turn-taking, but does not evaluate the responses - it's all about the conversation and interaction!
+
+### How to Play
+
+1. **Start the Game**: The game automatically starts when you load the page
+2. **Take Turns**: Players alternate turns drawing cards
+3. **Draw a Card**: The active player clicks the deck to draw a card
+4. **Respond to Prompts**: 
+   - **Single-response cards**: The other player responds
+   - **Both-response cards**: Both players respond
+5. **Continue**: After responses are submitted, click "Next Turn" to continue
+6. **Game End**: The game ends when all cards are drawn
+
+## Features
+
+- ✨ Elegant, premium UI design with smooth animations
+- 🎴 Card flip animations for card reveals
+- 👥 Clear player indicators showing whose turn it is
+- 📝 Response collection with validation
+- 🌓 Dark mode support
+- 📱 Fully responsive design
+- 🎯 Turn-based game flow management
+
+## Tech Stack
+
+- **Next.js 16** - React framework
+- **React 19** - UI library
+- **Redux Toolkit** - State management
+- **Redux Persist** - State persistence
+- **Framer Motion** - Animation library
+- **Tailwind CSS 4** - Styling
+- **Lucide React** - Icon library
+- **Biome** - Linting and formatting
 
 ## Getting Started
 
-First, run the development server:
+### Development
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open [http://localhost:3000](http://localhost:3000) to see the game.
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+### Build
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```bash
+npm run build
+npm start
+```
 
-## Learn More
+## Deployment
 
-To learn more about Next.js, take a look at the following resources:
+This project is configured for deployment on Vercel:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+1. Push your code to GitHub
+2. Import the repository in [Vercel](https://vercel.com)
+3. Vercel will automatically detect Next.js and configure the build
+4. Deploy!
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+Or use the Vercel CLI:
 
-## Deploy on Vercel
+```bash
+npm i -g vercel
+vercel
+```
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## Design Decisions
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- **Single-page application**: Keeps focus on the game flow
+- **State management**: Uses **Redux Toolkit** with **Redux Persist** for predictable state and automatic persistence
+- **No backend required**: All game logic runs in the browser
+- **Elegant animations**: Smooth, purposeful transitions using Framer Motion
+- **Progressive disclosure**: UI elements appear based on game phase
+
+## Project Structure
+
+```
+src/
+├── app/
+│   ├── page.js          # Main game component
+│   ├── layout.js         # Root layout
+│   └── globals.css       # Global styles and animations
+├── components/
+│   ├── Card.js           # Card component with flip animation
+│   ├── Deck.js           # Deck visualization
+│   ├── GameControls.js   # Action buttons
+│   ├── PlayerIndicator.js # Player status display
+│   └── ResponseInput.js  # Response collection UI
+└── lib/
+    └── cards.js          # Card data and deck utilities
+```
+
+## Future Enhancements
+
+With more time, I would add:
+- Game history/recap at the end
+- Custom player names
+- Card categories/themes
+- Response editing before submission
+- Turn timer (optional)
+- Custom card creation
+- Multiple saved games
+- Export game history as PDF/text
+- Full keyboard navigation and accessibility features
+
+## Notes
+
+See [NOTES.md](./NOTES.md) for detailed information about:
+- How game rules were interpreted
+- Design and UX decisions
+- Technical architecture
+- What would be improved with more time
