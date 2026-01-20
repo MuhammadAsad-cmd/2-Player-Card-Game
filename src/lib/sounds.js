@@ -5,6 +5,11 @@ class SoundManager {
     this.enabled = typeof window !== 'undefined' && window.AudioContext;
     this.audioContext = null;
     this.volume = 0.3; // Subtle volume
+    this.soundEnabled = true; // Can be toggled via Redux
+  }
+
+  setEnabled(enabled) {
+    this.soundEnabled = enabled;
   }
 
   init() {
@@ -18,7 +23,7 @@ class SoundManager {
 
   // Generate a subtle sound effect
   playTone(frequency, duration, type = 'sine') {
-    if (!this.enabled || !this.audioContext) return;
+    if (!this.enabled || !this.audioContext || !this.soundEnabled) return;
 
     const oscillator = this.audioContext.createOscillator();
     const gainNode = this.audioContext.createGain();

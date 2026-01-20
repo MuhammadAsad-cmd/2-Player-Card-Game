@@ -4,7 +4,6 @@ import { useState, useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { motion, AnimatePresence } from 'framer-motion';
 import { cardTypes } from '../lib/cards';
-import { GAME_PHASES, startGame, drawCard, revealCard, submitResponse, nextTurn, resetGame } from '../lib/slices/gameSlice';
 import { soundManager } from '../lib/sounds';
 import Card from '../components/Card';
 import PlayerIndicator from '../components/PlayerIndicator';
@@ -12,27 +11,72 @@ import Deck from '../components/Deck';
 import ResponseInput from '../components/ResponseInput';
 import GameControls from '../components/GameControls';
 import ShareButton from '../components/ShareButton';
-import { Trophy, RotateCcw } from 'lucide-react';
+import ResponseHistoryPanel from '../components/ResponseHistoryPanel';
+import GameRecap from '../components/GameRecap';
+import PlayerNameModal from '../components/PlayerNameModal';
+import SoundToggle from '../components/SoundToggle';
+import CategorySelector from '../components/CategorySelector';
+import Timer from '../components/Timer';
+import CardCreator from '../components/CardCreator';
+import { GAME_PHASES, startGame, drawCard, revealCard, submitResponse, editResponse, setPlayerNames, toggleSound, toggleReaction, setSelectedCategories, toggleFavorite, setTimerSettings, startTimer, stopTimer, nextTurn, resetGame } from '../lib/slices/gameSlice';
+import { Trophy, RotateCcw, Settings, Plus } from 'lucide-react';
 
 export default function Home() {
   const dispatch = useDispatch();
   const state = useSelector((state) => state.game);
   const [cardFlipped, setCardFlipped] = useState(false);
   const [isShuffling, setIsShuffling] = useState(false);
+  const [isHistoryOpen, setIsHistoryOpen] = useState(false);
+  const [showNameModal, setShowNameModal] = useState(false);
+  const [showCategoryModal, setShowCategoryModal] = useState(false);
+  const [showCardCreator, setShowCardCreator] = useState(false);
+
+  // Update sound manager when soundEnabled changes
+  useEffect(() => {
+    if (soundManager) {
+      soundManager.setEnabled(state.soundEnabled);
+    }
+  }, [state.soundEnabled]);
 
   // Initialize game on mount
   useEffect(() => {
     if (!state.gameStarted) {
-      setIsShuffling(true);
-      if (soundManager) {
-        soundManager.playShuffle();
+      // Show name modal if names are default
+      if (state.playerNames[1] === 'Player 1' && state.playerNames[2] === 'Player 2') {
+        setShowNameModal(true);
+      } else {
+        setIsShuffling(true);
+        if (soundManager && state.soundEnabled) {
+          soundManager.playShuffle();
+        }
+        setTimeout(() => {
+          dispatch(startGame());
+          setIsShuffling(false);
+        }, 1000);
       }
-      setTimeout(() => {
-        dispatch(startGame());
-        setIsShuffling(false);
-      }, 1000);
     }
-  }, [state.gameStarted, dispatch]);
+  }, [state.gameStarted, dispatch, state.playerNames]);
+
+  // Handle player name confirmation
+  const handleNameConfirm = (names) => {
+    dispatch(setPlayerNames(names));
+    setShowNameModal(false);
+    setShowCategoryModal(true);
+  };
+
+  // Handle category selection
+  const handleCategoryConfirm = (categories) => {
+    dispatch(setSelectedCategories(categories));
+    setShowCategoryModal(false);
+    setIsShuffling(true);
+    if (soundManager && state.soundEnabled) {
+      soundManager.playShuffle();
+    }
+    setTimeout(() => {
+      dispatch(startGame({ selectedCategories: categories }));
+      setIsShuffling(false);
+    }, 1000);
+  };
 
   // Handle card flip completion
   const handleCardFlipComplete = () => {
@@ -41,7 +85,7 @@ export default function Home() {
     // Don't set cardFlipped here - it's already set in handleDrawCard
     // Just dispatch the reveal action
     dispatch(revealCard());
-    if (soundManager) {
+    if (soundManager && state.soundEnabled) {
       soundManager.playCardFlip();
     }
   };
@@ -57,8 +101,9 @@ export default function Home() {
     
     setCardFlipped(false);
     dispatch(drawCard());
+    dispatch(startTimer());
     
-    if (soundManager) {
+    if (soundManager && state.soundEnabled) {
       soundManager.playCardDraw();
     }
     
@@ -81,9 +126,31 @@ export default function Home() {
   // Handle response submission
   const handleSubmitResponse = (playerNumber, response) => {
     dispatch(submitResponse({ playerNumber, response }));
-    if (soundManager) {
+    if (soundManager && state.soundEnabled) {
       soundManager.playSubmit();
     }
+  };
+
+  // Handle response editing
+  const handleEditResponse = (playerNumber, response) => {
+    dispatch(editResponse({ playerNumber, response }));
+  };
+
+  // Handle reaction toggle
+  const handleToggleReaction = (turnNumber, playerNumber, emoji) => {
+    dispatch(toggleReaction({ turnNumber, playerNumber, emoji }));
+  };
+
+  // Handle favorite toggle
+  const handleToggleFavorite = (turnNumber, playerNumber) => {
+    dispatch(toggleFavorite({ turnNumber, playerNumber }));
+  };
+
+  // Check if response is favorited
+  const isFavorite = (turnNumber, playerNumber) => {
+    return state.favorites.some(
+      f => f.turnNumber === turnNumber && f.playerNumber === playerNumber
+    );
   };
 
   // Handle next turn
@@ -96,7 +163,7 @@ export default function Home() {
   const handleResetGame = () => {
     setCardFlipped(false);
     setIsShuffling(true);
-    if (soundManager) {
+    if (soundManager && state.soundEnabled) {
       soundManager.playShuffle();
     }
     dispatch(resetGame());
@@ -127,63 +194,85 @@ export default function Home() {
 
   // Play game over sound once
   useEffect(() => {
-    if (state.phase === GAME_PHASES.GAME_OVER && soundManager) {
+    if (state.phase === GAME_PHASES.GAME_OVER && soundManager && state.soundEnabled) {
       soundManager.playGameOver();
     }
-  }, [state.phase]);
+  }, [state.phase, state.soundEnabled]);
 
-  // Game over screen
+  // Handle play again (starts new game)
+  const handlePlayAgain = () => {
+    handleResetGame();
+  };
+
+  // Game over screen - show recap
   if (state.phase === GAME_PHASES.GAME_OVER) {
     return (
-      <motion.div
-        className="min-h-screen flex items-center justify-center bg-[#0f0f0f] p-4"
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.5 }}
-      >
-        <motion.div
-          className="max-w-2xl w-full bg-[#1a1a1a] rounded-2xl shadow-2xl p-10 text-center border border-[#2a2a2a]"
-          initial={{ scale: 0.9, y: 20 }}
-          animate={{ scale: 1, y: 0 }}
-          transition={{ duration: 0.5, ease: 'easeOut' }}
-        >
-          <motion.div
-            className="text-7xl mb-6"
-            animate={{ rotate: [0, 10, -10, 0] }}
-            transition={{ duration: 0.5, repeat: 2 }}
-          >
-            <Trophy className="w-20 h-20 mx-auto text-[#fbbf24]" />
-          </motion.div>
-          <h1 className="text-5xl font-bold text-white mb-4">
-            Game Complete!
-          </h1>
-          <p className="text-lg text-[#a0a0a0] mb-8">
-            You've gone through all the cards. Great game!
-          </p>
-          <motion.button
-            onClick={handleResetGame}
-            className="px-8 py-4 bg-[#3b82f6] hover:bg-[#2563eb] text-white font-semibold rounded-xl shadow-lg transition-all duration-200 flex items-center gap-2 mx-auto border border-[#3b82f6]/50"
-            whileHover={{ scale: 1.05, y: -2 }}
-            whileTap={{ scale: 0.95 }}
-          >
-            <RotateCcw className="w-5 h-5" />
-            Play Again
-          </motion.button>
-        </motion.div>
-      </motion.div>
+      <GameRecap
+        gameHistory={state.gameHistory}
+        playerNames={state.playerNames}
+        onPlayAgain={handlePlayAgain}
+        onResetGame={handleResetGame}
+      />
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#0f0f0f] p-4">
+    <div className="min-h-screen bg-[#0f0f0f] p-4 relative">
+      {/* Player Name Modal */}
+      <PlayerNameModal
+        isOpen={showNameModal}
+        onClose={() => setShowNameModal(false)}
+        onConfirm={handleNameConfirm}
+        playerNames={state.playerNames}
+      />
+
+      {/* Category Selector Modal */}
+      <CategorySelector
+        isOpen={showCategoryModal}
+        onClose={() => setShowCategoryModal(false)}
+        onConfirm={handleCategoryConfirm}
+        selectedCategories={state.selectedCategories}
+      />
+
+      {/* Card Creator Modal */}
+      <CardCreator
+        isOpen={showCardCreator}
+        onClose={() => setShowCardCreator(false)}
+        onCardAdded={() => {
+          // Refresh deck if game is active
+          if (state.gameStarted) {
+            // Optionally refresh the game with new cards
+          }
+        }}
+      />
+
       <div className="max-w-7xl mx-auto">
         {/* Header */}
         <motion.div
-          className="text-center mb-10 pt-8"
+          className="text-center mb-10 pt-8 relative"
           initial={{ opacity: 0, y: -20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
+          <div className="absolute top-8 right-0 flex gap-2">
+            <SoundToggle />
+            <div className="flex gap-2">
+              <button
+                onClick={() => setShowCardCreator(true)}
+                className="p-2 bg-[#1a1a1a] border border-[#2a2a2a] cursor-pointer rounded-lg hover:bg-[#252525] transition-all duration-200 text-white"
+                title="Create custom cards"
+              >
+                <Plus className="w-5 h-5" />
+              </button>
+              <button
+                onClick={() => setShowCategoryModal(true)}
+                className="p-2 bg-[#1a1a1a] border border-[#2a2a2a] cursor-pointer rounded-lg hover:bg-[#252525] transition-all duration-200 text-white"
+                title="Select card categories"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
           <h1 className="text-5xl md:text-6xl font-bold text-white mb-3">
             2-Player Card Game
           </h1>
@@ -202,12 +291,12 @@ export default function Home() {
           <PlayerIndicator
             playerNumber={1}
             isActive={isPlayer1Active}
-            playerName="Player 1"
+            playerName={state.playerNames[1]}
           />
           <PlayerIndicator
             playerNumber={2}
             isActive={isPlayer2Active}
-            playerName="Player 2"
+            playerName={state.playerNames[2]}
           />
         </motion.div>
 
@@ -340,21 +429,37 @@ export default function Home() {
                   {respondingPlayers.player1 && (
                     <ResponseInput
                       playerNumber={1}
-                      playerName="Player 1"
+                      playerName={state.playerNames[1]}
                       onSubmit={(response) => handleSubmitResponse(1, response)}
+                      onEdit={(response) => handleEditResponse(1, response)}
                       isRequired={true}
                       isSubmitted={!!state.responses[1]}
                       submittedResponse={state.responses[1]}
+                      canEdit={state.phase === GAME_PHASES.RESPONSE_COMPLETE}
+                      timestamp={state.responseTimestamps[1]}
+                      turnNumber={state.turnNumber + 1}
+                      reactions={state.reactions[`${state.turnNumber + 1}-1`] || []}
+                      onToggleReaction={handleToggleReaction}
+                      isFavorite={isFavorite(state.turnNumber + 1, 1)}
+                      onToggleFavorite={handleToggleFavorite}
                     />
                   )}
                   {respondingPlayers.player2 && (
                     <ResponseInput
                       playerNumber={2}
-                      playerName="Player 2"
+                      playerName={state.playerNames[2]}
                       onSubmit={(response) => handleSubmitResponse(2, response)}
+                      onEdit={(response) => handleEditResponse(2, response)}
                       isRequired={true}
                       isSubmitted={!!state.responses[2]}
                       submittedResponse={state.responses[2]}
+                      canEdit={state.phase === GAME_PHASES.RESPONSE_COMPLETE}
+                      timestamp={state.responseTimestamps[2]}
+                      turnNumber={state.turnNumber + 1}
+                      reactions={state.reactions[`${state.turnNumber + 1}-2`] || []}
+                      onToggleReaction={handleToggleReaction}
+                      isFavorite={isFavorite(state.turnNumber + 1, 2)}
+                      onToggleFavorite={handleToggleFavorite}
                     />
                   )}
                 </div>
@@ -381,6 +486,9 @@ export default function Home() {
           />
         </motion.div>
       </div>
+
+      {/* Response History Panel */}
+      <ResponseHistoryPanel />
     </div>
   );
 }

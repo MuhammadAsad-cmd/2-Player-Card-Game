@@ -5,14 +5,22 @@ export const cardTypes = {
   BOTH_RESPONSE: 'both-response',
 };
 
+export const cardCategories = {
+  PERSONAL: 'personal',
+  CREATIVE: 'creative',
+  PHILOSOPHICAL: 'philosophical',
+  FUN: 'fun',
+  DEEP: 'deep',
+};
+
 // Array of card prompts
 export const cardDeck = [
   // Single-response cards (other player responds)
-  { id: 1, prompt: "Tell a story about your most memorable childhood adventure.", type: cardTypes.SINGLE_RESPONSE },
-  { id: 2, prompt: "Describe your ideal day from sunrise to sunset.", type: cardTypes.SINGLE_RESPONSE },
-  { id: 3, prompt: "What's a skill you've always wanted to learn and why?", type: cardTypes.SINGLE_RESPONSE },
-  { id: 4, prompt: "Share a moment that changed your perspective on life.", type: cardTypes.SINGLE_RESPONSE },
-  { id: 5, prompt: "If you could have dinner with any historical figure, who would it be and what would you ask?", type: cardTypes.SINGLE_RESPONSE },
+  { id: 1, prompt: "Tell a story about your most memorable childhood adventure.", type: cardTypes.SINGLE_RESPONSE, category: cardCategories.PERSONAL },
+  { id: 2, prompt: "Describe your ideal day from sunrise to sunset.", type: cardTypes.SINGLE_RESPONSE, category: cardCategories.PERSONAL },
+  { id: 3, prompt: "What's a skill you've always wanted to learn and why?", type: cardTypes.SINGLE_RESPONSE, category: cardCategories.CREATIVE },
+  { id: 4, prompt: "Share a moment that changed your perspective on life.", type: cardTypes.SINGLE_RESPONSE, category: cardCategories.DEEP },
+  { id: 5, prompt: "If you could have dinner with any historical figure, who would it be and what would you ask?", type: cardTypes.SINGLE_RESPONSE, category: cardCategories.PHILOSOPHICAL },
   { id: 6, prompt: "Describe a place you've never been but dream of visiting.", type: cardTypes.SINGLE_RESPONSE },
   { id: 7, prompt: "What's something you're grateful for that others might take for granted?", type: cardTypes.SINGLE_RESPONSE },
   { id: 8, prompt: "Tell about a time you stepped outside your comfort zone.", type: cardTypes.SINGLE_RESPONSE },
@@ -25,8 +33,8 @@ export const cardDeck = [
   { id: 15, prompt: "What's a goal you're working towards right now?", type: cardTypes.SINGLE_RESPONSE },
   
   // Both-response cards (both players respond)
-  { id: 16, prompt: "Both players: Share your favorite way to unwind after a long day.", type: cardTypes.BOTH_RESPONSE },
-  { id: 17, prompt: "Both players: Describe your ideal vacation destination.", type: cardTypes.BOTH_RESPONSE },
+  { id: 16, prompt: "Both players: Share your favorite way to unwind after a long day.", type: cardTypes.BOTH_RESPONSE, category: cardCategories.FUN },
+  { id: 17, prompt: "Both players: Describe your ideal vacation destination.", type: cardTypes.BOTH_RESPONSE, category: cardCategories.PERSONAL },
   { id: 18, prompt: "Both players: What's a food you could eat every day and never get tired of?", type: cardTypes.BOTH_RESPONSE },
   { id: 19, prompt: "Both players: Share a random act of kindness you've experienced or given.", type: cardTypes.BOTH_RESPONSE },
   { id: 20, prompt: "Both players: What's something that always makes you smile?", type: cardTypes.BOTH_RESPONSE },
@@ -53,6 +61,56 @@ export function shuffleDeck(deck) {
 }
 
 // Initialize a shuffled deck
-export function createShuffledDeck() {
-  return shuffleDeck(cardDeck);
+export function createShuffledDeck(selectedCategories = null) {
+  let deck = [...cardDeck];
+  
+  // Filter by categories if provided
+  if (selectedCategories && selectedCategories.length > 0) {
+    deck = deck.filter(card => selectedCategories.includes(card.category));
+  }
+  
+  return shuffleDeck(deck);
+}
+
+// Custom cards management
+const CUSTOM_CARDS_KEY = 'conversationCards_customCards';
+
+export function getCustomCards() {
+  if (typeof window === 'undefined') return [];
+  try {
+    const stored = localStorage.getItem(CUSTOM_CARDS_KEY);
+    return stored ? JSON.parse(stored) : [];
+  } catch (e) {
+    console.error('Error loading custom cards:', e);
+    return [];
+  }
+}
+
+export function saveCustomCard(card) {
+  const customCards = getCustomCards();
+  const newCard = {
+    ...card,
+    id: Date.now(), // Simple ID generation
+    isCustom: true,
+  };
+  customCards.push(newCard);
+  localStorage.setItem(CUSTOM_CARDS_KEY, JSON.stringify(customCards));
+  return newCard;
+}
+
+export function deleteCustomCard(cardId) {
+  const customCards = getCustomCards();
+  const filtered = customCards.filter(c => c.id !== cardId);
+  localStorage.setItem(CUSTOM_CARDS_KEY, JSON.stringify(filtered));
+}
+
+export function getAllCards(selectedCategories = null) {
+  const customCards = getCustomCards();
+  const allCards = [...cardDeck, ...customCards];
+  
+  if (selectedCategories && selectedCategories.length > 0) {
+    return allCards.filter(card => selectedCategories.includes(card.category));
+  }
+  
+  return allCards;
 }
